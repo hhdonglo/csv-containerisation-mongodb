@@ -82,15 +82,14 @@ An ETL pipeline for migrating **55,500+ medical records** from CSV to MongoDB wi
 
 ## Architecture
 ### ETL Pipeline Flow
-```
-![ETL Pipeline Flow](/docs/images/etl_pipeline_flow.png)
-```
+
+![ETL Pipeline Flow](docs/images/etl_pipeline_flow.png)
 
 
 ### Docker Infrastructure
-```
+
 ![Docker Infrastructure](docs/images/docker_infrastructure.png)
-```
+
 
 ### Pipeline Components
 
