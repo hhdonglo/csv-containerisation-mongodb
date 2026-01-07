@@ -1,0 +1,26 @@
+# Virtual Environment
+.venv/
+venv/
+env/
+
+# macOS
+.DS_Store
+Icon?
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Data (adjust as needed)
+data/
+processed/
+outputs/
+
+# Notebooks checkpoints
+.ipynb_checkpoints/
+
+
+# for executing the code 
+run.sh
+GITHUB_COMMANDS.md
