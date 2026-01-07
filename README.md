@@ -253,41 +253,7 @@ docker exec -it healthcare_mongodb mongosh medical_records \
 ## Database Schema
 
 ### Document Structure (Nested Design)
-```javascript
-{
-  "patient_info": {
-    "name": String,
-    "age": Integer,
-    "gender": String,
-    "blood_type": String
-  },
-  "medical_details": {
-    "medical_condition": String,  // Indexed
-    "medication": String,
-    "test_results": String
-  },
-  "admission_details": {
-    "admission_date": ISODate,    // Indexed
-    "admission_type": String,
-    "room_number": Integer,
-    "discharge_date": ISODate
-  },
-  "hospital_info": {
-    "hospital": String,           // Indexed (compound)
-    "doctor": String
-  },
-  "billing": {
-    "insurance_provider": String,
-    "billing_amount": Double
-  },
-  "metadata": {
-    "created_at": ISODate,
-    "updated_at": ISODate,
-    "data_source": "CSV_migration",
-    "migrated_by": "Hope - OpenClassroom-project"
-  }
-}
-```
+![The healthcare data schema](docs/images/mongodb_patient_schema.png)
 
 ### Indexing Strategy
 ```javascript
@@ -475,7 +441,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Project Status
 
-**Status**: ✅ Completed  
+**Status**: Completed  
 **Version**: 1.0.0  
 **Last Updated**: January 2026
 
@@ -489,7 +455,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**⭐ If you find this project useful, please give it a star!**
+**If you find this project useful, please give it a star!**
 
 ---
 
