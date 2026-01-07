@@ -13,9 +13,9 @@
 
 ## Executive Summary
 
-An ETL pipeline for migrating **55,500+ medical records** from CSV to MongoDB with data quality assurance, containerization, and AWS deployment research. Built for a healthcare provider experiencing scalability issues with traditional relational databases. The solution delivers automated data cleaning, integrity validation, and cloud-ready architecture—all containerized with Docker for seamless deployment.
+Production-ready ETL pipeline migrating **54,966 medical records** from CSV to MongoDB with automated data quality assurance, Docker containerization, and comprehensive AWS deployment research. Built for a healthcare provider experiencing scalability issues with traditional relational databases.
 
-**Key Achievements**: Zero data integrity issues, 21% memory optimization, 100% test pass rate across 54,966+ medical records.
+**Key Achievements**: Zero data integrity issues, 21% memory optimization, 100% test pass rate, 45-second processing time.
 
 ---
 
@@ -37,59 +37,111 @@ An ETL pipeline for migrating **55,500+ medical records** from CSV to MongoDB wi
 
 ## Problem Statement & Solution
 
-**Client Challenge**: Healthcare provider experiencing scalability issues with daily patient record management.
+**Client Challenge**: Healthcare provider experiencing scalability issues with daily patient record management using traditional relational database.
 
 **Solution Delivered**: 
-- Automated CSV-to-MongoDB migration pipeline
-- Dockerized for portability and scalability
-- AWS deployment research (DocumentDB, ECS, S3)
-- Production-ready authentication and documentation
+- Automated CSV-to-MongoDB migration pipeline with 7-step ETL workflow
+- Dockerized infrastructure for portability and scalability
+- AWS deployment research (DocumentDB, ECS, S3 cost analysis)
+- Production-ready documentation and security guidelines
 
 ---
 
 ## Key Features
 
 ### ETL Automation
-- 7-step orchestrated workflow from CSV to MongoDB
+- 7-step orchestrated workflow from raw CSV to validated MongoDB documents
 - Automated data cleaning (name standardization, duplicate removal)
-- Memory optimization (categorical types, datetime conversion)
-- Data quality reporting (markdown + CSV)
+- Memory optimization (21% reduction via categorical types, datetime conversion)
+- Comprehensive quality reporting (markdown + CSV formats)
 
 ### Data Quality & Validation
-- 5-tier integrity testing suite - (document count, field structure, data types, missing values, duplicates)
+- 5-tier integrity testing suite (document count, field structure, data types, missing values, duplicates)
 - Automated pytest validation with 100% pass rate
-
-
-### Containerized Deployment
-- Full Docker + Docker Compose orchestration
-- MongoDB 8.2 with health checks and auto-restart
-- Mongo Express web UI for database management
-- Environment-based configuration for security
+- Real-time quality metrics and anomaly detection
 
 ### Containerized Deployment
 - Full Docker + Docker Compose orchestration
-- MongoDB 8.2 with health checks
-- Mongo Express web UI
-- Environment-based configuration
+- MongoDB 8.2 with health checks and auto-restart policies
+- Mongo Express web UI for database management (port 8081)
+- Environment-based configuration for credential security
 
 ### Cloud-Ready Architecture
-- AWS deployment research (DocumentDB, ECS, S3)
-  - Cost analysis and optimization strategies (~$243/month)
-  - Disaster recovery planning (RTO <1hr, RPO <5min)
-  - Monitoring and alerting strategies (CloudWatch, SNS)
+- AWS deployment research (DocumentDB vs Atlas vs EC2 vs ECS)
+- Cost analysis (~$247/month production, reduces to $62/month with Reserved Instances)
+- Disaster recovery planning (RTO <1hr, RPO <5min)
+- HIPAA compliance considerations
 
 ---
 
 ## Architecture
+
 ### ETL Pipeline Flow
 
 ![ETL Pipeline Flow](docs/images/etl_pipeline_flow.png)
 
+**Pipeline Stages**:
+
+**[1] Load Raw CSV** - Ingests 55,500 patient records from source CSV file
+
+**[2] Data Cleaning** - Processes data through 4 parallel operations:
+- **Name Std.**: Standardizes patient names (title case, whitespace trimming)
+- **Dup. Removal**: Removes 534 duplicate records (-0.96%)
+- **Type Opt.**: Optimizes data types for 20.96% memory reduction
+- **Quality Reports**: Generates detailed metrics and validation reports
+
+**[3] MongoDB Connection** - Establishes authenticated database connection with health validation
+
+**[4] Load Cleaned Data** - Loads processed dataset (54,966 rows, 15 columns)
+
+**[5] Bulk Insert** - Performs batch insertion to MongoDB (5,000 documents per batch)
+
+**[6] Integrity Validation** - Executes 5-tier validation suite (100% pass rate)
+
+**[7] Success** - Pipeline completion with summary statistics
+
+**Processing Time**: ~45 seconds (5s load + 10s clean + 25s migrate + 5s validate)
+
+---
 
 ### Docker Infrastructure
 
 ![Docker Infrastructure](docs/images/docker_infrastructure.png)
 
+**Container Architecture**:
+
+**healthcare_mongo_ui** (Mongo Express)
+- Web-based MongoDB management interface
+- Port 8081 (accessible at http://localhost:8081)
+- Provides visual database exploration and query tools
+
+**healthcare_migration** (Python 3.13)
+- Executes the ETL migration pipeline
+- Connects to MongoDB via `mongodb://27017`
+- Runs automated data processing and validation
+
+**healthcare_mongodb** (MongoDB 8.2)
+- Primary database container
+- Port 27017 (internal network)
+- Persistent data storage via mounted volume
+
+**healthcare_network** (Bridge Network)
+- Isolated Docker network for inter-container communication
+- Secure internal DNS resolution
+- Network isolation from host
+
+**mongo_data** (Docker Volume)
+- Persistent storage for MongoDB data files
+- Survives container restarts and updates
+- Enables backup and recovery operations
+
+**Connection Flow**:
+- Migration app → MongoDB: `mongodb://27017` (database operations)
+- Mongo Express → MongoDB: `http://27017` (management interface)
+- All containers communicate through the dedicated bridge network
+- Volume ensures data persistence across container lifecycle
+
+---
 
 ### Pipeline Components
 
@@ -98,7 +150,7 @@ An ETL pipeline for migrating **55,500+ medical records** from CSV to MongoDB wi
 | **load_data.py** | CSV ingestion with validation | DataFrame |
 | **cleaning.py** | Data standardization & quality checks | Cleaned CSV + Reports |
 | **migration.py** | MongoDB connection & bulk insertion | Structured documents |
-| **test_migration.py** | Data integrity validation | Test reports |
+| **test.py** | Data integrity validation | Test reports |
 | **pipeline.py** | Orchestration and error handling | Pipeline status |
 
 ---
@@ -157,7 +209,7 @@ cp your_healthcare_data.csv data/raw/healthcare.csv
 # Start entire stack
 docker-compose up -d
 
-# View logs
+# View logs in real-time
 docker-compose logs -f migration_app
 
 # Access Mongo Express UI
@@ -181,7 +233,7 @@ pytest tests/test_migration.py -v
 **Check Pipeline Output**:
 ```
 data/processed/
-├── cleaned_healthcare.csv           # Cleaned data (54,300 rows)
+├── cleaned_healthcare.csv           # Cleaned data (54,966 rows)
 ├── healthcare_cleaning_report.md    # Detailed cleaning report
 └── healthcare_quality_report.csv    # Quality metrics
 ```
@@ -238,8 +290,8 @@ docker exec -it healthcare_mongodb mongosh medical_records \
 ```
 
 ### Indexing Strategy
-```java
-Optimized indexes for common queries
+```javascript
+// Optimized indexes for common queries
 db.healthcare_data.createIndex({ "patient_info.name": 1 })
 db.healthcare_data.createIndex({ "admission_details.admission_date": 1 })
 db.healthcare_data.createIndex({
@@ -249,7 +301,7 @@ db.healthcare_data.createIndex({
 ```
 
 **Design Rationale**:
-- Nested documents eliminate join complexity
+- Nested documents eliminate complex joins
 - Indexes optimize patient lookups, date-range queries, and hospital analytics
 - Logical grouping improves read performance and developer experience
 
@@ -273,13 +325,16 @@ For detailed schema documentation and query examples, see [Operations Guide](doc
 
 ### Quality Metrics
 
-**Pipeline Results** (Sample Dataset):
+**Pipeline Results**:
 ```
-Shape before:  (55,500, 15)
-Duplicates:    1,200 rows (2.16%)
-Shape after:   (54,300, 15)
-Memory saved:  12.4 MB (41.3%)
-Data quality:  98.5% accuracy
+Initial Load:    55,500 rows, 15 columns
+Duplicates:      534 rows removed (0.96%)
+Final Dataset:   54,966 rows, 15 columns
+Memory Before:   37.97 MB
+Memory After:    30.01 MB
+Memory Saved:    7.96 MB (20.96% reduction)
+Processing Time: ~45 seconds
+Test Results:    5/5 passed (100%)
 ```
 
 **Run Tests**:
@@ -296,7 +351,7 @@ For complete testing procedures and quality assurance documentation, see [Operat
 ### Core Stack
 - **Python 3.13**: Primary language
 - **MongoDB 8.2**: NoSQL database
-- **Docker and Docker Compose**: Containerization
+- **Docker & Docker Compose**: Containerization
 - **Poetry**: Dependency management
 
 ### Key Libraries
@@ -317,15 +372,26 @@ python-dotenv = "^1.0.0"       # Environment management
 
 ---
 
-
 ## Project Structure
 ```
 healthcare-data-migration/
 ├── src/csv_containerisation_mongodb/    # Python application code
+│   ├── main/                            # Entry point and orchestration
+│   ├── data/                            # Data loading and cleaning
+│   ├── migration/                       # MongoDB operations
+│   ├── test/                            # Integrity validation
+│   └── utils/                           # Utility functions
 ├── tests/                               # Test suite
-├── data/                                # Raw and processed data
-├── docs/                                # Comprehensive documentation
-├── docker/                              # Docker configuration and aws 
+├── data/
+│   ├── raw/                             # Source CSV files
+│   └── processed/                       # Cleaned data and reports
+├── docs/
+│   ├── aws-architecture.md              # Cloud deployment research
+│   ├── operations.md                    # Operations and monitoring
+│   ├── security.md                      # Security and compliance
+│   └── images/                          # Architecture diagrams
+├── docker/
+│   └── Dockerfile                       # Application container
 ├── docker-compose.yml                   # Service orchestration
 ├── pyproject.toml                       # Dependencies
 └── README.md                            # Main documentation
@@ -335,16 +401,16 @@ healthcare-data-migration/
 
 ## Documentation
 
-Comprehensive documentation is organized by audience and use case:
+Comprehensive documentation organized by audience and use case:
 
 ### Documentation Suite
 
 | Document | Audience | Purpose |
 |----------|---------|---------|
 | **[README.md](README.md)** | All stakeholders | Overview and quick start |
-| **[AWS Architecture](docs/aws-architecture.md)** | Cloud engineers, architects | Cloud deployment design and cost strategy |
-| **[Operations Guide](docs/operations.md)** | DevOps, SRE teams | Runtime operations, monitoring, backups |
-| **[Security Guide](docs/security.md)** | Security engineers, auditors | Authentication, authorization, compliance |
+| **[AWS Architecture](docs/aws-architecture.md)** | Cloud engineers, architects | Deployment options, cost analysis, service comparisons |
+| **[Operations Guide](docs/operations.md)** | DevOps, SRE teams | Pipeline operations, monitoring, backups, disaster recovery |
+| **[Security Guide](docs/security.md)** | Security engineers, auditors | Authentication, authorization, HIPAA compliance |
 
 ### Additional Resources
 
@@ -356,9 +422,9 @@ Comprehensive documentation is organized by audience and use case:
 ### Generated Reports
 
 All pipeline runs generate:
-- **Cleaning Report**: `data/processed/*_cleaning_report.md`
-- **Quality CSV**: `data/processed/*_quality_report.csv`
-- **Test Results**: `pytest` terminal output
+- **Cleaning Report**: `data/processed/healthcare_cleaning_report.md`
+- **Quality CSV**: `data/processed/quality_report_healthcare.csv`
+- **Test Results**: pytest terminal output with detailed validation
 
 ---
 
@@ -406,22 +472,25 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Docker**: Containerization platform
 
 ---
+
 ## Project Status
 
-**Status**: Completed  
+**Status**: ✅ Completed  
 **Version**: 1.0.0  
 **Last Updated**: January 2026
 
 ### Pipeline Statistics
-- **Records Processed**: 55,500+
-- **Data Quality**: 98.5% accuracy
+- **Records Processed**: 54,966 (from 55,500 raw)
+- **Duplicates Removed**: 534 (0.96%)
+- **Memory Optimization**: 20.96% reduction
 - **Processing Time**: ~45 seconds
-- **Memory Optimization**: 41.3% reduction
 - **Test Coverage**: 100% (5/5 tests passing)
----
-
-**If you find this project useful, please give it a star!**
+- **Data Integrity**: Zero issues detected
 
 ---
 
-*This project was developed as part of the OpenClassrooms Data Engineering certification program, demonstrating practical expertise in NoSQL databases, containerization, and research on cloud architecture.*
+**⭐ If you find this project useful, please give it a star!**
+
+---
+
+*This project was developed as part of the OpenClassrooms Data Engineering certification program, demonstrating practical expertise in NoSQL databases, ETL pipeline development, Docker containerization, and cloud architecture research.*
