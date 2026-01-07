@@ -7,6 +7,12 @@
 [![Poetry](https://img.shields.io/badge/Poetry-Dependency%20Management-purple.svg)](https://python-poetry.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+
+[![English](https://img.shields.io/badge/📖_Documentation-English-blue?style=for-the-badge)](README.md)
+[![Français](https://img.shields.io/badge/📖_Documentation-Français-red?style=for-the-badge)](README.fr.md)
+[![Translation Status](https://img.shields.io/badge/Translation-Up_to_date-green.svg)](README.fr.md)
+
+
 > **OpenClassrooms Data Engineering Project 5** | DataSoluTech Medical Data Migration Solution
 
 ---
