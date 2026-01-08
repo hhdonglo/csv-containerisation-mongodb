@@ -4,6 +4,21 @@
 **Project:** Healthcare Data Migration Pipeline  
 **Date:** January 2026
 
+[![English](https://img.shields.io/badge/📖_Documentation-English-blue?style=for-the-badge)](operations.md)
+[![Français](https://img.shields.io/badge/📖_Documentation-Français-red?style=for-the-badge)](operations.fr.md)
+
+---
+
+## Container Reference
+
+For quick reference, here are the container names used throughout this guide:
+
+| Service | Container Name | Purpose |
+|---------|---------------|---------|
+| MongoDB Database | `healthcare_mongodb` | Primary database storage |
+| Migration App | `healthcare_migration` | ETL pipeline execution |
+| Mongo Express UI | `healthcare_mongo_ui` | Web-based database management |
+
 ---
 
 ## Table of Contents
@@ -27,8 +42,14 @@
 # Start all services
 docker-compose up -d
 
-# View logs
-docker-compose logs -f migration_app
+# View logs for specific container
+docker-compose logs -f healthcare_migration
+
+# View logs for MongoDB
+docker-compose logs -f healthcare_mongodb
+
+# View logs for Mongo Express UI
+docker-compose logs -f healthcare_mongo_ui
 
 # Check service status
 docker-compose ps
@@ -47,6 +68,9 @@ docker-compose down -v
 ```bash
 # Restart all services
 docker-compose restart
+
+# Restart specific service
+docker-compose restart healthcare_mongodb
 ```
 
 #### Local Development
@@ -82,7 +106,7 @@ export LOG_LEVEL="DEBUG"
 ### Output Files
 ```
 data/processed/
-├── cleaned_healthcare.csv           # Cleaned data
+├── cleaned_healthcare.csv           # Cleaned data (54,966 records)
 ├── healthcare_cleaning_report.md    # Detailed cleaning report
 └── healthcare_quality_report.csv    # Quality metrics
 ```
@@ -97,20 +121,26 @@ data/processed/
 
 **View Container Stats**:
 ```bash
-# Real-time resource usage
+# Real-time resource usage for all containers
 docker stats
 
-# Specific container
+# Specific container stats
 docker stats healthcare_mongodb
+docker stats healthcare_migration
+docker stats healthcare_mongo_ui
 
-# Container logs
+# Container logs with tail
 docker logs healthcare_mongodb --tail 100 -f
+docker logs healthcare_migration --tail 100 -f
 ```
 
 **Health Checks**:
 ```bash
 # Check MongoDB health
 docker exec healthcare_mongodb mongosh --eval "db.runCommand('ping')"
+
+# Check MongoDB connection from migration container
+docker exec healthcare_migration python -c "from pymongo import MongoClient; client = MongoClient('mongodb://mongodb:27017'); print(client.server_info())"
 ```
 
 #### Application Logging
@@ -122,6 +152,9 @@ tail -f /var/log/healthcare-migration/pipeline.log
 
 # Search for errors
 grep ERROR /var/log/healthcare-migration/*.log
+
+# View last 100 lines
+tail -n 100 /var/log/healthcare-migration/pipeline.log
 ```
 
 ### Cloud Monitoring Options
@@ -139,10 +172,14 @@ For AWS cloud monitoring strategies (CloudWatch, metrics, alarms), see [AWS Arch
 **Manual Backup**:
 ```bash
 # Compressed backup
-mongodump --uri="mongodb://localhost:27017" \
+docker exec healthcare_mongodb mongodump \
+  --uri="mongodb://localhost:27017" \
   --db=medical_records \
   --gzip \
-  --archive=/backups/backup_$(date +%Y%m%d).gz
+  --archive=/tmp/backup_$(date +%Y%m%d).gz
+
+# Copy backup from container to host
+docker cp healthcare_mongodb:/tmp/backup_$(date +%Y%m%d).gz ./backups/
 ```
 
 **Automated Backup Script**:
@@ -152,11 +189,18 @@ BACKUP_DIR="/backups/mongodb"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 RETENTION_DAYS=7
 
-# Create backup
-mongodump --uri="mongodb://localhost:27017" \
+# Create backup directory if it doesn't exist
+mkdir -p ${BACKUP_DIR}
+
+# Create backup inside container
+docker exec healthcare_mongodb mongodump \
+  --uri="mongodb://localhost:27017" \
   --db=medical_records \
   --gzip \
-  --archive="${BACKUP_DIR}/backup_${TIMESTAMP}.gz"
+  --archive=/tmp/backup_${TIMESTAMP}.gz
+
+# Copy backup from container to host
+docker cp healthcare_mongodb:/tmp/backup_${TIMESTAMP}.gz ${BACKUP_DIR}/
 
 # Delete old backups
 find ${BACKUP_DIR} -name "backup_*.gz" -mtime +${RETENTION_DAYS} -delete
@@ -173,11 +217,15 @@ echo "[$(date)] Backup completed: backup_${TIMESTAMP}.gz" >> /var/log/mongodb-ba
 
 #### Restore from Backup
 ```bash
-# From compressed backup
-mongorestore --uri="mongodb://localhost:27017" \
+# Copy backup to container
+docker cp ./backups/backup_20260107.gz healthcare_mongodb:/tmp/
+
+# Restore from compressed backup
+docker exec healthcare_mongodb mongorestore \
+  --uri="mongodb://localhost:27017" \
   --db=medical_records \
   --gzip \
-  --archive=/backups/backup_20260107.gz
+  --archive=/tmp/backup_20260107.gz
 ```
 
 ### Backup Best Practices
@@ -213,19 +261,23 @@ For AWS backup strategies (DocumentDB automated backups, S3 storage, snapshots),
 **Recovery Steps**:
 ```bash
 # 1. Stop application
-docker-compose stop migration_app
+docker-compose stop healthcare_migration
 
-# 2. Restore from backup
-mongorestore --uri="mongodb://localhost:27017" \
+# 2. Copy backup to container
+docker cp ./backups/mongodb/backup_latest.gz healthcare_mongodb:/tmp/
+
+# 3. Restore from backup
+docker exec healthcare_mongodb mongorestore \
+  --uri="mongodb://localhost:27017" \
   --db=medical_records \
   --gzip \
-  --archive=/backups/mongodb/backup_latest.gz
+  --archive=/tmp/backup_latest.gz
 
-# 3. Restart application
-docker-compose start migration_app
+# 4. Restart application
+docker-compose start healthcare_migration
 
-# 4. Verify data integrity
-python -m csv_containerisation_mongodb.test.test
+# 5. Verify data integrity
+docker exec healthcare_migration python -m csv_containerisation_mongodb.test.test
 ```
 
 **Recovery Time**: ~10 minutes
@@ -235,10 +287,13 @@ python -m csv_containerisation_mongodb.test.test
 **Recovery Steps**:
 ```bash
 # Restart container
-docker-compose restart mongodb
+docker-compose restart healthcare_mongodb
 
 # Verify connectivity
 docker exec healthcare_mongodb mongosh --eval "db.runCommand('ping')"
+
+# Check container health
+docker inspect healthcare_mongodb --format='{{.State.Health.Status}}'
 ```
 
 **Recovery Time**: < 2 minutes
@@ -247,20 +302,65 @@ docker exec healthcare_mongodb mongosh --eval "db.runCommand('ping')"
 
 **Recovery Steps**:
 ```bash
-# Stop writes
-docker-compose stop migration_app
+# 1. Stop writes immediately
+docker-compose stop healthcare_migration
 
-# Restore from backup
-mongorestore --uri="mongodb://localhost:27017" \
+# 2. Copy backup to container
+docker cp ./backups/mongodb/backup_latest.gz healthcare_mongodb:/tmp/
+
+# 3. Restore from backup
+docker exec healthcare_mongodb mongorestore \
+  --uri="mongodb://localhost:27017" \
   --db=medical_records \
   --gzip \
-  --archive=/backups/mongodb/backup_latest.gz
+  --archive=/tmp/backup_latest.gz
 
-# Restart
-docker-compose start migration_app
+# 4. Verify restoration
+docker exec healthcare_mongodb mongosh medical_records \
+  --eval "db.healthcare_data.countDocuments()"
+
+# 5. Restart application
+docker-compose start healthcare_migration
 ```
 
 **Recovery Time**: ~10 minutes
+
+#### 4. Complete System Failure
+
+**Recovery Steps**:
+```bash
+# 1. Reinstall Docker and Docker Compose
+
+# 2. Clone repository
+git clone https://github.com/hhdonglo/csv-containerisation-mongodb.git
+cd csv-containerisation-mongodb
+
+# 3. Restore environment configuration
+cp .env.backup .env
+
+# 4. Start services
+docker-compose up -d
+
+# 5. Wait for MongoDB to be healthy
+docker ps
+
+# 6. Copy backup to container
+docker cp ./backups/mongodb/backup_latest.gz healthcare_mongodb:/tmp/
+
+# 7. Restore data
+docker exec healthcare_mongodb mongorestore \
+  --uri="mongodb://localhost:27017" \
+  --db=medical_records \
+  --gzip \
+  --archive=/tmp/backup_latest.gz
+
+# 8. Verify all services
+docker-compose ps
+docker exec healthcare_mongodb mongosh medical_records \
+  --eval "db.healthcare_data.countDocuments()"
+```
+
+**Recovery Time**: ~30 minutes
 
 ### Cloud Disaster Recovery Options
 
@@ -290,6 +390,9 @@ pytest tests/test_migration.py::TestDataIntegrity::test_document_count -v
 ```bash
 # Run all integrity checks
 python -m csv_containerisation_mongodb.test.test
+
+# Or from Docker container
+docker exec healthcare_migration python -m csv_containerisation_mongodb.test.test
 ```
 
 **Manual Validation**:
@@ -297,14 +400,29 @@ python -m csv_containerisation_mongodb.test.test
 // Connect to MongoDB
 use medical_records
 
-// Count documents
+// Count documents (should be 54,966)
 db.healthcare_data.countDocuments()
 
 // Sample documents
 db.healthcare_data.find().limit(5).pretty()
 
+// Check for duplicates
+db.healthcare_data.aggregate([
+  { $group: { _id: "$patient_info.name", count: { $sum: 1 } } },
+  { $match: { count: { $gt: 1 } } }
+])
+
+// Verify field structure
+db.healthcare_data.findOne()
+
 // Check indexes
 db.healthcare_data.getIndexes()
+```
+
+**Run Manual Validation via Docker**:
+```bash
+docker exec -it healthcare_mongodb mongosh medical_records \
+  --eval "db.healthcare_data.countDocuments()"
 ```
 
 ---
@@ -318,21 +436,34 @@ db.healthcare_data.getIndexes()
 **Symptoms**:
 ```
 ERROR: MongoDB connection failed - Connection refused
+pymongo.errors.ServerSelectionTimeoutError
 ```
 
 **Solutions**:
 ```bash
-# Check if MongoDB is running
-docker ps | grep mongodb
+# Check if MongoDB container is running
+docker ps | grep healthcare_mongodb
 
 # Check MongoDB logs
 docker logs healthcare_mongodb --tail 50
 
-# Verify connectivity
+# Verify connectivity from migration container
+docker exec healthcare_migration ping mongodb
+
+# Check MongoDB status
 docker exec healthcare_mongodb mongosh --eval "db.runCommand('ping')"
+
+# Restart MongoDB if needed
+docker-compose restart healthcare_mongodb
 ```
 
 #### 2. Out of Memory Error
+
+**Symptoms**:
+```
+MemoryError: Unable to allocate array
+docker: Error response from daemon: OOM command not allowed when used memory > 'maxmemory'
+```
 
 **Solutions**:
 ```bash
@@ -342,47 +473,158 @@ docker stats healthcare_migration
 # Increase Docker memory limit (docker-compose.yml)
 services:
   migration_app:
-    mem_limit: 4g
+    deploy:
+      resources:
+        limits:
+          memory: 4g
+        reservations:
+          memory: 2g
+
+# Restart services
+docker-compose down
+docker-compose up -d
 ```
 
 #### 3. Duplicate Key Error
 
+**Symptoms**:
+```
+pymongo.errors.DuplicateKeyError: E11000 duplicate key error
+```
+
 **Solutions**:
 ```bash
-# Check for duplicates in source
+# Check for duplicates in source CSV
 python -c "
 import pandas as pd
 df = pd.read_csv('data/raw/healthcare.csv')
-print(df.duplicated().sum())
+print(f'Total rows: {len(df)}')
+print(f'Duplicates: {df.duplicated().sum()}')
+print(f'Unique rows: {len(df.drop_duplicates())}')
 "
 
 # Drop and recreate collection
-mongosh medical_records --eval "db.healthcare_data.drop()"
+docker exec healthcare_mongodb mongosh medical_records \
+  --eval "db.healthcare_data.drop()"
+
+# Rerun migration
+docker-compose restart healthcare_migration
 ```
 
 #### 4. Slow Migration Performance
+
+**Symptoms**:
+```
+Migration taking > 2 minutes
+High CPU/Memory usage
+```
 
 **Solutions**:
 ```bash
 # Check system resources
 docker stats
 
-# Optimize bulk insert size in migration.py
-# Disable indexes during migration, recreate after
+# Check MongoDB performance
+docker exec healthcare_mongodb mongosh medical_records \
+  --eval "db.currentOp()"
+
+# Optimize: Increase bulk insert batch size in migration.py
+# Default: 5000, Try: 10000
+
+# Optimize: Disable indexes during migration, recreate after
+# See migration.py for index management
+
+# Check for slow queries
+docker exec healthcare_mongodb mongosh medical_records \
+  --eval "db.setProfilingLevel(2); db.system.profile.find().limit(5).pretty()"
+```
+
+#### 5. Port Already in Use
+
+**Symptoms**:
+```
+Error starting userland proxy: listen tcp4 0.0.0.0:27017: bind: address already in use
+Error starting userland proxy: listen tcp4 0.0.0.0:8081: bind: address already in use
+```
+
+**Solutions**:
+```bash
+# Check what's using the port
+lsof -i :27017
+lsof -i :8081
+
+# Kill the process or change ports in docker-compose.yml
+# For example, change MongoDB port:
+ports:
+  - "27018:27017"  # Use 27018 on host instead
+
+# Restart services
+docker-compose down
+docker-compose up -d
+```
+
+#### 6. Container Keeps Restarting
+
+**Symptoms**:
+```
+docker ps shows container restarting repeatedly
+Status: Restarting (1) X seconds ago
+```
+
+**Solutions**:
+```bash
+# Check container logs
+docker logs healthcare_mongodb --tail 100
+docker logs healthcare_migration --tail 100
+
+# Check for configuration errors
+docker inspect healthcare_mongodb
+
+# Common causes:
+# - Invalid MongoDB credentials
+# - Missing environment variables
+# - Insufficient resources
+# - Port conflicts
+
+# Fix and restart
+docker-compose down
+# Fix the issue in docker-compose.yml or .env
+docker-compose up -d
 ```
 
 ### Debug Mode
 
 **Enable Debug Logging**:
 ```bash
-# Set environment variable
+# Set environment variable in .env file
+LOG_LEVEL=DEBUG
+
+# Or export directly
 export LOG_LEVEL=DEBUG
 
 # Run with verbose output
 python -m csv_containerisation_mongodb.main.main --verbose
 
-# Docker logs
-docker-compose logs -f --tail 1000
+# Docker logs with timestamp
+docker-compose logs -f --tail 1000 --timestamps
+
+# Filter logs for specific container
+docker-compose logs healthcare_migration | grep ERROR
+```
+
+**Interactive Debugging**:
+```bash
+# Enter MongoDB container shell
+docker exec -it healthcare_mongodb bash
+
+# Enter migration container shell
+docker exec -it healthcare_migration bash
+
+# Run Python interactively in migration container
+docker exec -it healthcare_migration python
+
+# Test MongoDB connection interactively
+docker exec -it healthcare_mongodb mongosh medical_records
 ```
 
 ---
@@ -391,20 +633,34 @@ docker-compose logs -f --tail 1000
 
 ### Operational Best Practices
 
-1. **Regular Monitoring**: Check container stats daily
-2. **Backup Verification**: Test restores monthly
-3. **Update Dependencies**: Keep packages current
-4. **Security Patches**: Apply promptly
-5. **Documentation**: Keep runbooks updated
-6. **Change Management**: Document all changes
+1. **Regular Monitoring**: Check container stats daily using `docker stats`
+2. **Backup Verification**: Test restores monthly to ensure backups work
+3. **Update Dependencies**: Keep Poetry packages current with `poetry update`
+4. **Security Patches**: Apply Docker and system updates promptly
+5. **Documentation**: Keep runbooks updated with any configuration changes
+6. **Change Management**: Document all changes in git commit messages
+7. **Health Checks**: Monitor container health status regularly
+8. **Resource Planning**: Monitor trends and plan for capacity increases
 
 ### Backup Best Practices
 
-1. **Automate Everything**: No manual backups
-2. **Test Restores Monthly**: Ensure backups work
-3. **Multiple Locations**: On-site + off-site
-4. **Encrypt Backups**: Protect sensitive data
-5. **Monitor Jobs**: Alert on failures
+1. **Automate Everything**: Use cron jobs, no manual backups
+2. **Test Restores Monthly**: Ensure backups are valid and restorable
+3. **Multiple Locations**: Store backups on-site + off-site (e.g., S3)
+4. **Encrypt Backups**: Protect sensitive healthcare data
+5. **Monitor Jobs**: Set up alerts for backup failures
+6. **Retention Policy**: Keep daily backups for 7 days, weekly for 4 weeks, monthly for 12 months
+7. **Document Procedures**: Maintain clear backup and restore documentation
+8. **Version Control**: Track backup script changes in git
+
+### Security Best Practices
+
+1. **Credential Management**: Use .env files, never commit credentials
+2. **Network Isolation**: Use Docker networks to isolate services
+3. **Regular Updates**: Keep all dependencies and images updated
+4. **Access Control**: Implement least privilege access
+5. **Audit Logs**: Enable and monitor MongoDB audit logs
+6. **Encryption**: Use TLS for MongoDB connections in production
 
 ---
 
@@ -418,22 +674,122 @@ docker-compose logs -f --tail 1000
 | **Migration Time** | < 1 min | 45 sec | PASS |
 | **Test Pass Rate** | 100% | 100% | PASS |
 | **Backup Success** | 100% | 100% | PASS |
+| **Data Integrity** | 100% | 100% | PASS |
+| **Records Processed** | 54,966 | 54,966 | PASS |
 
 ### Performance Baselines
 ```yaml
 Pipeline Performance:
   - Data Loading: ~5 seconds
-  - Data Cleaning: ~10 seconds
-  - MongoDB Migration: ~25 seconds
+  - Data Cleaning: ~10 seconds (includes deduplication)
+  - MongoDB Migration: ~25 seconds (bulk insert 5,000/batch)
   - Integrity Validation: ~5 seconds
-  - Total Time: ~45 seconds
+  - Total Pipeline Time: ~45 seconds
 
-Resource Usage:
-  - CPU: 30-40% average
-  - Memory: 2-3 GB peak
-  - Disk I/O: 50 MB/s
-  - Network: 10 Mbps
+Resource Usage (Docker):
+  - CPU: 30-40% average during migration
+  - Memory: 2-3 GB peak (MongoDB + Python)
+  - Disk I/O: 50 MB/s during bulk insert
+  - Network: 10 Mbps internal container communication
+
+Data Metrics:
+  - Initial Load: 55,500 rows
+  - Duplicates Removed: 534 rows (0.96%)
+  - Final Dataset: 54,966 rows
+  - Memory Optimization: 20.96% reduction
+  - Fields per Document: 15 columns
 ```
+
+### Monitoring Checklist
+
+**Daily**:
+- [ ] Check container status: `docker ps`
+- [ ] Review logs for errors: `docker-compose logs | grep ERROR`
+- [ ] Verify disk space: `df -h`
+- [ ] Check backup completion
+
+**Weekly**:
+- [ ] Review performance metrics
+- [ ] Check for Docker/system updates
+- [ ] Verify backup integrity
+- [ ] Review security logs
+
+**Monthly**:
+- [ ] Test backup restore procedure
+- [ ] Review and update documentation
+- [ ] Performance optimization review
+- [ ] Security audit
+
+---
+
+## Quick Reference Commands
+
+### Common Docker Commands
+```bash
+# Start everything
+docker-compose up -d
+
+# Stop everything
+docker-compose down
+
+# View all logs
+docker-compose logs -f
+
+# View specific container logs
+docker logs -f healthcare_mongodb
+
+# Check container status
+docker ps
+
+# Check container stats
+docker stats
+
+# Enter container shell
+docker exec -it healthcare_mongodb bash
+
+# Run MongoDB shell
+docker exec -it healthcare_mongodb mongosh medical_records
+
+# Restart specific service
+docker-compose restart healthcare_mongodb
+
+# View container details
+docker inspect healthcare_mongodb
+```
+
+### Common MongoDB Commands
+```bash
+# Count documents
+docker exec healthcare_mongodb mongosh medical_records \
+  --eval "db.healthcare_data.countDocuments()"
+
+# Check database size
+docker exec healthcare_mongodb mongosh medical_records \
+  --eval "db.stats()"
+
+# List collections
+docker exec healthcare_mongodb mongosh medical_records \
+  --eval "db.getCollectionNames()"
+
+# Backup database
+docker exec healthcare_mongodb mongodump \
+  --db=medical_records --gzip --archive=/tmp/backup.gz
+
+# Restore database
+docker exec healthcare_mongodb mongorestore \
+  --db=medical_records --gzip --archive=/tmp/backup.gz
+```
+
+---
+
+## Contact and Support
+
+For issues, questions, or contributions:
+
+- **GitHub Issues**: [github.com/hhdonglo/csv-containerisation-mongodb/issues](https://github.com/hhdonglo/csv-containerisation-mongodb/issues)
+- **Documentation**: See main [README.md](../README.md)
+- **AWS Guide**: See [aws-architecture.md](aws-architecture.md)
+- **Security Guide**: See [security.md](security.md)
 
 ---
 
