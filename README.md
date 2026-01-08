@@ -19,7 +19,7 @@
 
 ## Executive Summary
 
-Production-ready ETL pipeline migrating **54,966 medical records** from CSV to MongoDB with automated data quality assurance, Docker containerization, and comprehensive AWS deployment research. Built for a healthcare provider experiencing scalability issues with traditional relational databases.
+Production-ready ETL pipeline migrating **54,966 medical records** from CSV to MongoDB with automated data quality assurance, Docker containerization, and comprehensive AWS deployment research. Built for a healthcare provider experiencing scalability issues with daily activities.
 
 **Key Achievements**: Zero data integrity issues, 21% memory optimization, 100% test pass rate, 45-second processing time.
 
@@ -43,7 +43,7 @@ Production-ready ETL pipeline migrating **54,966 medical records** from CSV to M
 
 ## Problem Statement & Solution
 
-**Client Challenge**: Healthcare provider experiencing scalability issues with daily patient record management using traditional relational database.
+**Client Challenge**: Healthcare provider experiencing scalability issues with daily patient record management.
 
 **Solution Delivered**: 
 - Automated CSV-to-MongoDB migration pipeline with 7-step ETL workflow
@@ -57,24 +57,24 @@ Production-ready ETL pipeline migrating **54,966 medical records** from CSV to M
 
 ### ETL Automation
 - 7-step orchestrated workflow from raw CSV to validated MongoDB documents
-- Automated data cleaning (name standardization, duplicate removal)
-- Memory optimization (21% reduction via categorical types, datetime conversion)
-- Comprehensive quality reporting (markdown + CSV formats)
+- Automated data cleaning: name standardization, duplicate removal
+- Memory optimization: 21% reduction via categorical types, datetime conversion
+
 
 ### Data Quality & Validation
-- 5-tier integrity testing suite (document count, field structure, data types, missing values, duplicates)
+- 5-tier integrity testing suite: document count, field structure, data types, missing values, duplicates
 - Automated pytest validation with 100% pass rate
-- Real-time quality metrics and anomaly detection
+
 
 ### Containerized Deployment
 - Full Docker + Docker Compose orchestration
-- MongoDB 8.2 with health checks and auto-restart policies
-- Mongo Express web UI for database management (port 8081)
+- MongoDB with health checks and auto-restart policies
+- Mongo Express web UI for database management - port 8081
 - Environment-based configuration for credential security
 
 ### Cloud-Ready Architecture
 - AWS deployment research (DocumentDB vs Atlas vs EC2 vs ECS)
-- Cost analysis (~$247/month production, reduces to $62/month with Reserved Instances)
+- Cost analysis 
 - Disaster recovery planning (RTO <1hr, RPO <5min)
 - HIPAA compliance considerations
 
@@ -94,13 +94,13 @@ Production-ready ETL pipeline migrating **54,966 medical records** from CSV to M
 - **Name Std.**: Standardizes patient names (title case, whitespace trimming)
 - **Dup. Removal**: Removes 534 duplicate records (-0.96%)
 - **Type Opt.**: Optimizes data types for 20.96% memory reduction
-- **Quality Reports**: Generates detailed metrics and validation reports
+- **Quality Reports**: Generates metrics and validation reports
 
 **[3] MongoDB Connection** - Establishes authenticated database connection with health validation
 
-**[4] Load Cleaned Data** - Loads processed dataset (54,966 rows, 15 columns)
+**[4] Load Cleaned Data** - Loads processed dataset: 54,966 rows, 15 columns
 
-**[5] Bulk Insert** - Performs batch insertion to MongoDB (5,000 documents per batch)
+**[5] Bulk Insert** - Performs batch insertion to MongoDB: 5,000 documents per batch
 
 **[6] Integrity Validation** - Executes 5-tier validation suite (100% pass rate)
 
@@ -165,10 +165,12 @@ Production-ready ETL pipeline migrating **54,966 medical records** from CSV to M
 
 ### Prerequisites
 
-- **Python** 3.13+
-- **Docker** 20.10+
-- **Docker Compose** 2.0+
-- **Poetry** 1.7+ (or pip)
+- **Python** v3.13+
+- **Docker** v29.1.2+
+- **Docker Compose** v2.40.3
+- **Poetry**  v2.2.1
+
+
 
 ### Installation
 
@@ -194,13 +196,16 @@ cp .env.example .env
 nano .env
 ```
 
-**.env Configuration**:
+
+**.env Configuration**
 ```env
 MONGO_USERNAME=your_username
 MONGO_PASSWORD=your_secure_password
 MONGO_DATABASE=medical_records
 MONGO_URI=mongodb://your_username:your_password@mongodb:27017/medical_records?authSource=admin
 ```
+
+
 
 **4. Prepare Data**
 ```bash
@@ -216,7 +221,7 @@ cp your_healthcare_data.csv data/raw/healthcare.csv
 docker-compose up -d
 
 # View logs in real-time
-docker-compose logs -f migration_app
+docker-compose logs -f <container name>
 
 # Access Mongo Express UI
 # http://localhost:8081
@@ -429,19 +434,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 **Hope Donglo**  
 *Data Engineering Student | OpenClassrooms*
 
-- **Organization**: DataSoluTech
+- **Organization**: OpenClassrooms
 - **Project**: OpenClassrooms Data Engineering Path - Project 5
 - **Certification**: Data Engineering (October 2025 - October 2026)
 - **GitHub**: [github.com/hhdonglo](https://github.com/hhdonglo)
-
----
-
-## Acknowledgments
-
-- **OpenClassrooms**: Educational framework and project guidance
-- **DataSoluTech**: Professional project scenario and requirements
-- **MongoDB Community**: Excellent documentation and tools
-- **Docker**: Containerization platform
 
 ---
 
