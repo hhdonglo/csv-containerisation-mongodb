@@ -4,6 +4,9 @@
 **Projet :** Pipeline de Migration de Donnees de Sante  
 **Date :** Janvier 2026
 
+[![English](https://img.shields.io/badge/📖_Documentation-English-blue?style=for-the-badge)](operations.md)
+[![Français](https://img.shields.io/badge/📖_Documentation-Français-red?style=for-the-badge)](operations.fr.md)
+
 ---
 
 ## Reference des Conteneurs
