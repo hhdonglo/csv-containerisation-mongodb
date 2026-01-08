@@ -13,7 +13,6 @@ __pycache__/
 *.egg-info/
 
 # Data (adjust as needed)
-data/
 processed/
 outputs/
 
@@ -25,3 +24,4 @@ outputs/
 run.sh
 GITHUB_COMMANDS.md
 security.md
+docker-commands-reference.md
