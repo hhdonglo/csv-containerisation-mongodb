@@ -8,7 +8,7 @@ Main pipeline class orchestrating the complete ETL process:
 4. MongoDB migration
 5. Data integrity verification
 
-Author: Hope Donglo - OpenClassrooms (DataSoluTech)
+Author: hhdonglo - OpenClassrooms (DataSoluTech)
 """
 
 from pathlib import Path

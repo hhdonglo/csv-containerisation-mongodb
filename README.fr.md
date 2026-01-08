@@ -420,7 +420,7 @@ Ce projet est sous licence MIT - voir le fichier [LICENSE](LICENSE) pour plus de
 
 ## Auteur
 
-**Hope Donglo**  
+**hhdonglo**  
 *Étudiante en Ingénierie des Données | OpenClassrooms*
 
 - **Organisation** : OpenClassrooms

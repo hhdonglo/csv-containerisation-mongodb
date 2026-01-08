@@ -8,7 +8,7 @@ Usage:
     pytest tests/test_migration.py::TestDataIntegrity::test_document_count -v
     python -m csv_containerisation_mongodb.tests.test_migration
 
-Author: Hope Donglo - OpenClassrooms (DataSoluTech)
+Author: hhdonglo- OpenClassrooms (DataSoluTech)
 """
 
 import pandas as pd

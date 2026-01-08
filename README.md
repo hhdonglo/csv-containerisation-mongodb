@@ -433,7 +433,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Author
 
-**Hope Donglo**  
+**hhdonglo**  
 *Data Engineering Student | OpenClassrooms*
 
 - **Organization**: OpenClassrooms

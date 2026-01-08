@@ -4,7 +4,7 @@ MongoDB Migration Module
 Handles MongoDB connection management and data migration from CSV to MongoDB.
 Implements structured document transformation and bulk insertion.
 
-Author: Hope Donglo - OpenClassrooms (DataSoluTech)
+Author: hhdonglo - OpenClassrooms (DataSoluTech)
 """
 
 from pymongo import MongoClient

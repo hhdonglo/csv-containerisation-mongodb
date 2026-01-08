@@ -6,7 +6,7 @@ Initializes and executes the complete ETL pipeline.
 Usage:
     python -m csv_containerisation_mongodb.main.main
 
-Author: Hope Donglo - OpenClassrooms (DataSoluTech)
+Author: hhdonglo - OpenClassrooms (DataSoluTech)
 """
 
 import sys
