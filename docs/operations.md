@@ -1,6 +1,6 @@
 # Operations Guide
 
-**Author:** Hope Donglo - OpenClassrooms (DataSoluTech)  
+**Author:** hhdonglo - OpenClassrooms (DataSoluTech)  
 **Project:** Healthcare Data Migration Pipeline  
 **Date:** January 2026
 

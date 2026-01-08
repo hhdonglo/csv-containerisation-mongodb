@@ -1,8 +1,11 @@
 # AWS Cloud Architecture & Deployment Research
 
-**Author:** Hope Donglo - OpenClassrooms (DataSoluTech)  
+**Author:** hhdonglo - OpenClassrooms (DataSoluTech)  
 **Project:** Healthcare Data Migration Pipeline  
 **Date:** January 2026
+
+[![English](https://img.shields.io/badge/📖_Documentation-English-blue?style=for-the-badge)](aws-architecture.md)
+[![Français](https://img.shields.io/badge/📖_Documentation-Français-red?style=for-the-badge)](aws-architecture.fr.md)
 
 ---
 

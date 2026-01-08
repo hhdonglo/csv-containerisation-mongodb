@@ -1,6 +1,6 @@
 # Guide des Operations
 
-**Auteur :** Hope Donglo - OpenClassrooms (DataSoluTech)  
+**Auteur :** hhdonglo - OpenClassrooms (DataSoluTech)  
 **Projet :** Pipeline de Migration de Donnees de Sante  
 **Date :** Janvier 2026
 
