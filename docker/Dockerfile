@@ -14,6 +14,9 @@ COPY pyproject.toml poetry.lock README.md ./
 # Copy source code
 COPY src/ ./src/
 
+# Copy data files
+COPY data/ ./data/
+
 # Install dependencies (no virtual environment in container)
 RUN poetry config virtualenvs.create false && \
     poetry install --only main

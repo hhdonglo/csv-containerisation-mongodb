@@ -1,7 +1,9 @@
 # Healthcare Data Processing Pipeline - Docker Compose
 # MongoDB database, migration service, and web UI
-# Author: Hope Donglo - OpenClassrooms (DataSoluTech)
+# Author: hhdonglo - OpenClassrooms (DataSoluTech)
 
+
+# establish services and configurations
 services:
   mongodb:
     image: mongo:8.2
@@ -18,7 +20,7 @@ services:
       - ./data/processed:/data/processed
     networks:
       - healthcare_network
-    restart: unless-stopped
+    restart: unless-stopped 
     healthcheck:
       test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
       interval: 10s
@@ -26,6 +28,8 @@ services:
       retries: 5
       start_period: 10s
 
+
+ # Data migration application service
   migration_app:
     build:
       context: .
@@ -49,6 +53,8 @@ services:
       - healthcare_network
     restart: "no"
 
+
+  # Mongo Express web UI for MongoDB
   mongo_express:
     image: mongo-express:1.0-20
     container_name: healthcare_mongo_ui
@@ -68,10 +74,10 @@ services:
       - healthcare_network
     restart: unless-stopped
 
+# define volumes and networks
 volumes:
   mongo_data:
     driver: local
-
 networks:
   healthcare_network:
     driver: bridge
