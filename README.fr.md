@@ -1,10 +1,12 @@
 # Pipeline de Migration de Données de Santé
-## Migration de Base de Données NoSQL avec MongoDB, Docker & AWS
+## Migration de Base de Données NoSQL avec MongoDB, Docker & Recherche AWS
+
 [![Python](https://img.shields.io/badge/Python-3.13-blue.svg)](https://www.python.org/)
 [![MongoDB](https://img.shields.io/badge/MongoDB-8.2-green.svg)](https://www.mongodb.com/)
 [![Docker](https://img.shields.io/badge/Docker-Activé-blue.svg)](https://www.docker.com/)
 [![Poetry](https://img.shields.io/badge/Poetry-Gestion_des_Dépendances-purple.svg)](https://python-poetry.org/)
 [![License](https://img.shields.io/badge/Licence-MIT-yellow.svg)](LICENSE)
+
 [![English](https://img.shields.io/badge/📖_Documentation-English-blue?style=for-the-badge)](README.md)
 [![Français](https://img.shields.io/badge/📖_Documentation-Français-red?style=for-the-badge)](README.fr.md)
 [![Statut de Traduction](https://img.shields.io/badge/Traduction-À_jour-green.svg)](README.fr.md)
@@ -117,7 +119,7 @@ Pipeline ETL prêt pour la production migrant **54 966 dossiers médicaux** de C
 
 **healthcare_migration** (Python 3.13)
 - Exécute le pipeline de migration ETL
-- Se connecte à MongoDB via `mongodb://27017`
+- Se connecte à MongoDB via `mongodb://mongodb:27017`
 - Exécute le traitement et la validation automatisés des données
 
 **healthcare_mongodb** (MongoDB 8.2)
@@ -136,8 +138,8 @@ Pipeline ETL prêt pour la production migrant **54 966 dossiers médicaux** de C
 - Permet les opérations de sauvegarde et de récupération
 
 **Flux de Connexion** :
-- Application de migration → MongoDB : `mongodb://27017` (opérations de base de données)
-- Mongo Express → MongoDB : `http://27017` (interface de gestion)
+- L'application de migration utilise la chaîne de connexion MongoDB depuis les variables d'environnement
+- Mongo Express se connecte en utilisant les mêmes identifiants pour l'interface de gestion
 - Tous les conteneurs communiquent via le réseau bridge dédié
 - Le volume assure la persistance des données tout au long du cycle de vie du conteneur
 
@@ -168,7 +170,7 @@ Pipeline ETL prêt pour la production migrant **54 966 dossiers médicaux** de C
 
 **1. Cloner le Dépôt**
 ```bash
-git clone https://github.com/yourusername/healthcare-data-migration.git
+git clone https://github.com/hhdonglo/healthcare-data-migration.git
 cd healthcare-data-migration
 ```
 
@@ -183,18 +185,35 @@ pip install -r requirements.txt
 ```
 
 **3. Configurer l'Environnement**
+
+**NOTE DE SÉCURITÉ** : Le fichier docker-compose.yml inclut des valeurs par défaut de développement pour les tests locaux rapides. Pour la production ou toute utilisation sérieuse, vous devez créer un fichier `.env` avec des identifiants sécurisés.
 ```bash
+# Copier le modèle d'environnement
 cp .env.example .env
+
+# Éditer avec vos identifiants sécurisés
 nano .env
 ```
 
-**Configuration .env**
+**Configuration .env** :
 ```env
-MONGO_USERNAME=votre_nom_utilisateur
-MONGO_PASSWORD=votre_mot_de_passe_securise
+# Identifiants MongoDB - CHANGEZ-LES POUR LA PRODUCTION
+MONGO_USERNAME=votre_nom_utilisateur_securise
+MONGO_PASSWORD=votre_mot_de_passe_securise_min_12_car
 MONGO_DATABASE=medical_records
-MONGO_URI=mongodb://votre_nom_utilisateur:votre_mot_de_passe@mongodb:27017/medical_records?authSource=admin
+MONGO_URI=mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@mongodb:27017/${MONGO_DATABASE}?authSource=admin
 ```
+
+**Développement vs Production** :
+- **Développement (tests locaux)** : Peut fonctionner sans fichier `.env`, utilise les valeurs par défaut (`dev_user` / `dev_user_pass`)
+- **Production** : DOIT créer un fichier `.env` avec des identifiants forts et uniques
+
+**Bonnes Pratiques de Sécurité** :
+- Minimum 12 caractères pour les mots de passe
+- Utiliser majuscules, minuscules, chiffres et caractères spéciaux
+- Ne jamais réutiliser les mots de passe d'autres services
+- Garder le fichier `.env` hors du contrôle de version (déjà dans `.gitignore`)
+- Définir des permissions restrictives : `chmod 600 .env` (Linux/Mac)
 
 **4. Préparer les Données**
 ```bash
@@ -209,15 +228,30 @@ cp votre_donnees_sante.csv data/raw/healthcare.csv
 # Démarrer toute la pile
 docker-compose up -d
 
-# Voir les journaux en temps réel
-docker-compose logs -f <nom_conteneur>
+# Voir les journaux en temps réel en utilisant les noms de conteneurs
+docker logs -f healthcare_migration    # Journaux de migration
+docker logs -f healthcare_mongodb      # Journaux MongoDB
+docker logs -f healthcare_mongo_ui     # Journaux Mongo Express
+
+# Ou en utilisant les noms de services docker-compose
+docker-compose logs -f migration_app
+docker-compose logs -f mongodb
+docker-compose logs -f mongo_express
 
 # Accéder à l'interface Mongo Express
 # http://localhost:8081
 
 # Arrêter les services
 docker-compose down
+
+# Arrêter et supprimer les volumes (ATTENTION : détruit les données)
+docker-compose down -v
 ```
+
+**Référence des Noms de Conteneurs** :
+- `healthcare_mongodb` - Conteneur de base de données MongoDB
+- `healthcare_migration` - Conteneur du pipeline ETL
+- `healthcare_mongo_ui` - Interface web Mongo Express
 
 **Développement Local** :
 ```bash
@@ -242,10 +276,20 @@ data/processed/
 ```bash
 # Via l'interface Mongo Express : http://localhost:8081
 
-# Ou via CLI
+# Ou via CLI (en utilisant les identifiants .env)
 docker exec -it healthcare_mongodb mongosh medical_records \
-  -u votre_nom_utilisateur -p votre_mot_de_passe --authenticationDatabase admin \
+  -u $(grep MONGO_USERNAME .env | cut -d= -f2) \
+  -p $(grep MONGO_PASSWORD .env | cut -d= -f2) \
+  --authenticationDatabase admin \
   --eval "db.healthcare_data.countDocuments()"
+
+# Ou avec les identifiants par défaut (si pas de .env)
+docker exec -it healthcare_mongodb mongosh medical_records \
+  -u dev_user -p dev_user_pass \
+  --authenticationDatabase admin \
+  --eval "db.healthcare_data.countDocuments()"
+
+# Sortie attendue : 54966
 ```
 
 ---
@@ -359,6 +403,7 @@ healthcare-data-migration/
 ├── docker/
 │   └── Dockerfile                       # Conteneur d'application
 ├── docker-compose.yml                   # Orchestration des services
+├── .env.example                         # Modèle de variables d'environnement
 ├── pyproject.toml                       # Dépendances
 └── README.md                            # Documentation principale
 ```
