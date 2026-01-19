@@ -9,8 +9,8 @@ services:
     image: mongo:8.2
     container_name: healthcare_mongodb
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-hhdonglo}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-project5pass}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-dev_user}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-dev_user_pass}
       MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-medical_records}
     ports:
       - "27017:27017"
@@ -43,10 +43,10 @@ services:
     environment:
       MONGO_HOST: mongodb
       MONGO_PORT: 27017
-      MONGO_USERNAME: ${MONGO_USERNAME:-hhdonglo}
-      MONGO_PASSWORD: ${MONGO_PASSWORD:-project5pass}
+      MONGO_USERNAME: ${MONGO_USERNAME:-dev_user}
+      MONGO_PASSWORD: ${MONGO_PASSWORD:-dev_user_pass}
       MONGO_DATABASE: ${MONGO_DATABASE:-medical_records}
-      MONGO_URI: mongodb://${MONGO_USERNAME:-hhdonglo}:${MONGO_PASSWORD:-project5pass}@mongodb:27017/${MONGO_DATABASE:-medical_records}?authSource=admin
+      MONGO_URI: mongodb://${MONGO_USERNAME:-dev_user}:${MONGO_PASSWORD:-dev_user_pass}@mongodb:27017/${MONGO_DATABASE:-medical_records}?authSource=admin
       PYTHONPATH: /app
       PYTHONUNBUFFERED: 1
     networks:
@@ -64,12 +64,12 @@ services:
     ports:
       - "8081:8081"
     environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_USERNAME:-hhdonglo}
-      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_PASSWORD:-project5pass}
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_USERNAME:-dev_user}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_PASSWORD:-dev_user_pass}
       ME_CONFIG_MONGODB_SERVER: mongodb
       ME_CONFIG_MONGODB_PORT: 27017
-      ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_USERNAME:-hhdonglo}
-      ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_PASSWORD:-project5pass}
+      ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_USERNAME:-dev_user}
+      ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_PASSWORD:-dev_user_pass}
     networks:
       - healthcare_network
     restart: unless-stopped
