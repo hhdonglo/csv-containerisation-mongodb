@@ -1,5 +1,5 @@
 # Healthcare Data Migration Pipeline
-## NoSQL Database Migration with MongoDB, Docker & AWS-Reearch
+## NoSQL Database Migration with MongoDB, Docker & AWS Research
 
 [![Python](https://img.shields.io/badge/Python-3.13-blue.svg)](https://www.python.org/)
 [![MongoDB](https://img.shields.io/badge/MongoDB-8.2-green.svg)](https://www.mongodb.com/)
@@ -11,17 +11,13 @@
 [![Français](https://img.shields.io/badge/📖_Documentation-Français-red?style=for-the-badge)](README.fr.md)
 [![Translation Status](https://img.shields.io/badge/Translation-Up_to_date-green.svg)](README.fr.md)
 
-
-
-
-
 > **OpenClassrooms Data Engineering Project 5** | DataSoluTech Medical Data Migration Solution
 
 ---
 
 ## Executive Summary
 
-Production-ready ETL pipeline migrating **54,966 medical records** from CSV to MongoDB with automated data quality assurance, Docker containerization, and comprehensive AWS deployment research. Built for a healthcare provider experiencing scalability issues with daily activities.
+Production-ready ETL pipeline migrating **54,966 medical records** from CSV to MongoDB with automated data quality assurance, Docker containerization, and AWS deployment research. Built for a healthcare provider experiencing scalability issues with daily activities.
 
 **Key Achievements**: Zero data integrity issues, 21% memory optimization, 100% test pass rate, 45-second processing time.
 
@@ -62,11 +58,9 @@ Production-ready ETL pipeline migrating **54,966 medical records** from CSV to M
 - Automated data cleaning: name standardization, duplicate removal
 - Memory optimization: 21% reduction via categorical types, datetime conversion
 
-
 ### Data Quality & Validation
 - 5-tier integrity testing suite: document count, field structure, data types, missing values, duplicates
 - Automated pytest validation with 100% pass rate
-
 
 ### Containerized Deployment
 - Full Docker + Docker Compose orchestration
@@ -125,7 +119,7 @@ Production-ready ETL pipeline migrating **54,966 medical records** from CSV to M
 
 **healthcare_migration** (Python 3.13)
 - Executes the ETL migration pipeline
-- Connects to MongoDB via `mongodb://27017`
+- Connects to MongoDB via `mongodb://mongodb:27017`
 - Runs automated data processing and validation
 
 **healthcare_mongodb** (MongoDB 8.2)
@@ -144,8 +138,8 @@ Production-ready ETL pipeline migrating **54,966 medical records** from CSV to M
 - Enables backup and recovery operations
 
 **Connection Flow**:
-- Migration app → MongoDB: `mongodb://27017` (database operations)
-- Mongo Express → MongoDB: `http://27017` (management interface)
+- Migration app uses MongoDB connection string from environment variables
+- Mongo Express connects using same credentials for management interface
 - All containers communicate through the dedicated bridge network
 - Volume ensures data persistence across container lifecycle
 
@@ -172,8 +166,6 @@ Production-ready ETL pipeline migrating **54,966 medical records** from CSV to M
 - **Docker Compose** v2.40.3
 - **Poetry**  v2.2.1
 
-
-
 ### Installation
 
 **1. Clone Repository**
@@ -193,21 +185,35 @@ pip install -r requirements.txt
 ```
 
 **3. Configure Environment**
+
+**SECURITY NOTE**: The docker-compose.yml includes development defaults for quick local testing. For production or any serious use, you must create a `.env` file with secure credentials.
 ```bash
+# Copy environment template
 cp .env.example .env
+
+# Edit with your secure credentials
 nano .env
 ```
 
-
-**.env Configuration**
+**.env Configuration**:
 ```env
-MONGO_USERNAME=your_username
-MONGO_PASSWORD=your_secure_password
+# MongoDB Credentials - CHANGE THESE FOR PRODUCTION
+MONGO_USERNAME=your_secure_username
+MONGO_PASSWORD=your_secure_password_min_12_chars
 MONGO_DATABASE=medical_records
-MONGO_URI=mongodb://your_username:your_password@mongodb:27017/medical_records?authSource=admin
+MONGO_URI=mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@mongodb:27017/${MONGO_DATABASE}?authSource=admin
 ```
 
+**Development vs Production**:
+- **Development (local testing)**: Can run without `.env` file, uses defaults (`dev_user` / `dev_user_pass`)
+- **Production**: MUST create `.env` file with strong, unique credentials
 
+**Security Best Practices**:
+- Minimum 12 characters for passwords
+- Use uppercase, lowercase, numbers, and special characters
+- Never reuse passwords from other services
+- Keep `.env` file out of version control (already in `.gitignore`)
+- Set restrictive permissions: `chmod 600 .env` (Linux/Mac)
 
 **4. Prepare Data**
 ```bash
@@ -222,15 +228,30 @@ cp your_healthcare_data.csv data/raw/healthcare.csv
 # Start entire stack
 docker-compose up -d
 
-# View logs in real-time
-docker-compose logs -f <container name>
+# View logs in real-time using container names
+docker logs -f healthcare_migration    # Migration logs
+docker logs -f healthcare_mongodb      # MongoDB logs
+docker logs -f healthcare_mongo_ui     # Mongo Express logs
+
+# Or using docker-compose service names
+docker-compose logs -f migration_app
+docker-compose logs -f mongodb
+docker-compose logs -f mongo_express
 
 # Access Mongo Express UI
 # http://localhost:8081
 
 # Stop services
 docker-compose down
+
+# Stop and remove volumes (WARNING: destroys data)
+docker-compose down -v
 ```
+
+**Container Names Reference**:
+- `healthcare_mongodb` - MongoDB database container
+- `healthcare_migration` - ETL pipeline container
+- `healthcare_mongo_ui` - Mongo Express web interface
 
 **Local Development**:
 ```bash
@@ -255,10 +276,20 @@ data/processed/
 ```bash
 # Via Mongo Express UI: http://localhost:8081
 
-# Or via CLI
+# Or via CLI (using .env credentials)
 docker exec -it healthcare_mongodb mongosh medical_records \
-  -u your_username -p your_password --authenticationDatabase admin \
+  -u $(grep MONGO_USERNAME .env | cut -d= -f2) \
+  -p $(grep MONGO_PASSWORD .env | cut -d= -f2) \
+  --authenticationDatabase admin \
   --eval "db.healthcare_data.countDocuments()"
+
+# Or with default credentials (if no .env)
+docker exec -it healthcare_mongodb mongosh medical_records \
+  -u dev_user -p dev_user_pass \
+  --authenticationDatabase admin \
+  --eval "db.healthcare_data.countDocuments()"
+
+# Expected output: 54966
 ```
 
 ---
@@ -372,6 +403,7 @@ healthcare-data-migration/
 ├── docker/
 │   └── Dockerfile                       # Application container
 ├── docker-compose.yml                   # Service orchestration
+├── .env.example                         # Environment variable template
 ├── pyproject.toml                       # Dependencies
 └── README.md                            # Main documentation
 ```
